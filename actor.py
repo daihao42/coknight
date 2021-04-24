@@ -37,8 +37,6 @@ parser.add_argument('--server_address', default="", type=str,
                     help='Number of environment servers.')
 parser.add_argument('--env', type=str, default='PongNoFrameskip-v4',
                     help='Gym environment.')
-#parser.add_argument("--num_actions", default=6, type=int, metavar="A",
-#                    help="Number of actions.")
 parser.add_argument("--batch_size", default=8, type=int, metavar="B",
                     help="Batch size.")
 parser.add_argument("--actor_index", default=1, type=int, metavar="A",
@@ -70,16 +68,18 @@ class Env:
         frame = np.zeros((4, 84, 84), dtype=np.uint8)
         return frame, 0.0, False, {}  # First three mandatory.
 
-# atari env
-def create_env(env_name):
+
+def create_env(flags):
     return atari_wrappers.wrap_pytorch(
         atari_wrappers.wrap_deepmind(
-            atari_wrappers.make_atari(env_name),
+            atari_wrappers.make_atari(flags.env),
             clip_rewards=False,
             frame_stack=True,
             scale=False,
         )
     )
+
+
 
 def create_buffers(flags, obs_shape, num_actions) -> Buffers:
     T = flags.unroll_length
@@ -95,9 +95,8 @@ def create_buffers(flags, obs_shape, num_actions) -> Buffers:
         action=dict(size=(T + 1,), dtype=torch.int64),
     )
     buffers: Buffers = {key: [] for key in specs}
-    for _ in range(flags.num_buffers):
-        for key in buffers:
-            buffers[key].append(torch.empty(**specs[key]))
+    for key in buffers:
+        buffers[key].append(torch.empty(**specs[key]))
     return buffers
 
 
@@ -110,13 +109,13 @@ def act(
         logging.info("Actor %i started.", actor_index)
         timings = prof.Timings()  # Keep track of how fast things are.
 
-        gym_env = create_env(flags.env)
+        gym_env = create_env(flags)
         seed = actor_index ^ int.from_bytes(os.urandom(4), byteorder="little")
         gym_env.seed(seed)
 
         flags.num_actions = gym_env.action_space.n
 
-        model = Net(num_actions=flags.num_actions)
+        model = Net(gym_env.observation_space.shape, num_actions=flags.num_actions)
 
         buffers = create_buffers(flags, gym_env.observation_space.shape, model.num_actions)
 
