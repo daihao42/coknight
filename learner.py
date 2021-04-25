@@ -59,7 +59,7 @@ parser.add_argument("--xpid", default=None,
 # Training settings.
 parser.add_argument("--disable_checkpoint", action="store_true",
                     help="Disable saving checkpoint.")
-parser.add_argument("--savedir", default="~/logs/torchbeast",
+parser.add_argument("--savedir", default="~/coknight_logs",
                     help="Root dir where experiment data will be saved.")
 parser.add_argument("--num_actors", default=4, type=int, metavar="N",
                     help="Number of actors (default: 4).")
@@ -99,6 +99,10 @@ parser.add_argument("--momentum", default=0, type=float,
 parser.add_argument("--epsilon", default=0.01, type=float,
                     help="RMSProp epsilon.")
 parser.add_argument("--grad_norm_clipping", default=40.0, type=float,
+                    help="Global gradient norm clip.")
+
+
+parser.add_argument("--remark", default="logs", type=str,
                     help="Global gradient norm clip.")
 # yapf: enable
 
@@ -187,7 +191,7 @@ def learn(
     """Performs a learning (optimization) step."""
     with lock:
 
-        model.train()
+        #model.train()
 
         learner_outputs, unused_state = model(batch, initial_agent_state)
 
@@ -288,7 +292,7 @@ def update_buffers(flags, updated_datas):
 
 def train(flags):  # pylint: disable=too-many-branches, too-many-statements
     if flags.xpid is None:
-        flags.xpid = "torchbeast-%s" % time.strftime("%Y%m%d-%H%M%S")
+        flags.xpid = "coknight-%s-%s" % (flags.remark,time.strftime("%Y%m%d-%H%M%S"))
     plogger = file_writer.FileWriter(
         xpid=flags.xpid, xp_args=flags.__dict__, rootdir=flags.savedir
     )
@@ -423,7 +427,7 @@ def train(flags):  # pylint: disable=too-many-branches, too-many-statements
         while step < flags.total_steps:
             start_step = step
             start_time = timer()
-            time.sleep(5)
+            time.sleep(10)
 
             if timer() - last_checkpoint_time > 10 * 60:  # Save every 10 min.
                 checkpoint()
@@ -466,7 +470,7 @@ class ActorInferenceRpc(rpcenv_pb2_grpc.RPCActorInferenceServicer):
     def StreamingInference(self, request, context):
         with torch.no_grad():
             global learner_model
-            learner_model.eval()
+            #learner_model.eval()
             outputs = learner_model(pickle.loads(request.inter_tensors).cuda(),
                                     pickle.loads(request.agent_state),
                                     request.cut_layer,

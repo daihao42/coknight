@@ -127,7 +127,7 @@ def act(
 
         model = Net(gym_env.observation_space.shape, num_actions=flags.num_actions
                     ).to(device=flags.device)
-        model.eval()
+        #model.eval()
 
         buffers = create_buffers(flags, gym_env.observation_space.shape, model.num_actions)
 
@@ -148,7 +148,7 @@ def act(
                 timings.reset()
 
                 with torch.no_grad():
-                    if(flags.cut_layer < model.total_cut_layers):
+                    if(flags.cut_layer < model.total_cut_layers - 1):
                         inter_tensors, inter_T, inter_B = model(env_output, agent_state, cut_layer=flags.cut_layer)
                         agent_output, agent_state = rpcenv.inference_send(inter_tensors, agent_state, flags.cut_layer, inter_T, inter_B, env_output["reward"], channel)
                     else : 
@@ -173,7 +173,7 @@ def act(
                     parameters = rpcenv.pull_model(actor_index,channel)
                     logging.info("update model !!")
                     model.load_state_dict(parameters)
-                    logging.info("update model from learner in %i", env_output["episode_step"])
+                    logging.info("update model from learner in %i steps", env_output["episode_step"])
                     logging.info("model return in %f", env_output["episode_return"])
 
 

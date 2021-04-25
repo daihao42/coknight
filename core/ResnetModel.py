@@ -15,11 +15,11 @@ class ResNet(nn.Module):
         self.dilation = 1
         self.groups = 1
         self.base_width = 64
-        self._norm_layer = nn.BatchNorm2d
+        #self._norm_layer = nn.BatchNorm2d
 
         self.conv1 = nn.Conv2d(observation_shape[0], self.inplanes, kernel_size=7, stride=2, padding=3,
                                bias=False)
-        self.bn1 = self._norm_layer(self.inplanes)
+        #self.bn1 = self._norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool1 = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(self.block, 64, layers[0])
@@ -53,7 +53,7 @@ class ResNet(nn.Module):
     def forward(self, inputs, core_state, cut_layer = 10, LearnerInferenceMode=False, T=0, B=0, reward=[]):
         netStr = [
             "self.conv1(x)",
-            "self.bn1(x)",
+            #"self.bn1(x)",
             "self.relu(x)",
             "self.maxpool1(x)",
             "self.layer1(x)",
@@ -74,7 +74,7 @@ class ResNet(nn.Module):
 
             layer_index = 0
 
-            while(layer_index <= cut_layer):
+            while(layer_index < cut_layer):
                 x = eval(netStr[layer_index],{"self":self,"torch":torch,"x":x})
                 layer_index = layer_index + 1
 
@@ -85,9 +85,9 @@ class ResNet(nn.Module):
 
         else:
             x = inputs
-            layer_index = cut_layer + 1
+            layer_index = cut_layer
             
-            while(layer_index <= self.total_cut_layers):
+            while(layer_index < self.total_cut_layers):
                 x = eval(netStr[layer_index],{"self":self,"torch":torch,"x":x})
                 layer_index = layer_index + 1
 
@@ -121,7 +121,7 @@ class ResNet(nn.Module):
 
     
     def _make_layer(self, block, planes, blocks, stride=1, dilate=False):
-        norm_layer = self._norm_layer
+        #norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
         if dilate:
@@ -130,17 +130,16 @@ class ResNet(nn.Module):
         if stride != 1 or self.inplanes != planes * block.expansion:
             downsample = nn.Sequential(
                 conv1x1(self.inplanes, planes * block.expansion, stride),
-                norm_layer(planes * block.expansion),
+                #norm_layer(planes * block.expansion),
             )
 
         layers = []
         layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
-                            self.base_width, previous_dilation, norm_layer))
+                            self.base_width, previous_dilation))#, norm_layer))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
             layers.append(block(self.inplanes, planes, groups=self.groups,
-                                base_width=self.base_width, dilation=self.dilation,
-                                norm_layer=norm_layer))
+                                base_width=self.base_width, dilation=self.dilation))#,norm_layer=norm_layer))
 
         return nn.Sequential(*layers)
 
@@ -160,18 +159,18 @@ class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, stride=1, downsample=None, groups=1,
                  base_width=64, dilation=1, norm_layer=None):
         super(BasicBlock, self).__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
+        #if norm_layer is None:
+        #    norm_layer = nn.BatchNorm2d
         if groups != 1 or base_width != 64:
             raise ValueError('BasicBlock only supports groups=1 and base_width=64')
         if dilation > 1:
             raise NotImplementedError("Dilation > 1 not supported in BasicBlock")
         # Both self.conv1 and self.downsample layers downsample the input when stride != 1
         self.conv1 = conv3x3(inplanes, planes, stride)
-        self.bn1 = norm_layer(planes)
+        #self.bn1 = norm_layer(planes)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = conv3x3(planes, planes)
-        self.bn2 = norm_layer(planes)
+        #self.bn2 = norm_layer(planes)
         self.downsample = downsample
         self.stride = stride
 
@@ -179,11 +178,11 @@ class BasicBlock(nn.Module):
         identity = x
 
         out = self.conv1(x)
-        out = self.bn1(out)
+        #out = self.bn1(out)
         out = self.relu(out)
 
         out = self.conv2(out)
-        out = self.bn2(out)
+        #out = self.bn2(out)
 
         if self.downsample is not None:
             identity = self.downsample(x)
