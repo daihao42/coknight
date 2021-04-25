@@ -4,21 +4,20 @@ from utils import rpcenv_pb2_grpc
 
 def rpc_connect(remote_addr):
     # connect to rpc server
-    return grpc.insecure_channel(remote_addr,options=[('grpc.max_message_length',512 * 1024 * 1024),
-        ('grpc.max_receive_message_length',512 * 1024 * 1024)])
+    return grpc.insecure_channel(remote_addr,options=[('grpc.max_message_length',1024 * 1024 * 1024),
+        ('grpc.max_receive_message_length',1024 * 1024 * 1024)])
 
 
 # send obs to gpu for inference
-def inference_send(obs, reward, done, episode_step, episode_return, cut_layer, channel):
+def inference_send(inter_tensors, agent_state, cut_layer, T, B, reward, channel):
     # call rpc service
     stub = rpcenv_pb2_grpc.RPCActorInferenceStub(channel)
-    response = stub.StreamingInference(rpcenv_pb2.Step(observation=pickle.dumps(obs),
-                                                reward=reward,
-                                                done = done,
-                                                episode_step = episode_step,
-                                                episode_return = episode_return,
-                                                cut_layer=cut_layer))
-    return response.action
+    response = stub.StreamingInference(rpcenv_pb2.Step(inter_tensors=pickle.dumps(inter_tensors),
+                                                agent_state=pickle.dumps(agent_state),
+                                                cut_layer=cut_layer,
+                                                T=T, B=B,
+                                                reward=pickle.dumps(reward)))
+    return pickle.loads(response.agent_output_state)
 
 # download latest model
 def pull_model(actor_id, channel):

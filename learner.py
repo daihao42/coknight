@@ -30,7 +30,8 @@ from torch import nn
 from torch.nn import functional as F
 from core import file_writer
 from core import vtrace
-from core.models import Net
+#from core.models import Net
+from core.ResnetModel import ResNet as Net
 from core import environment
 from core import prof
 
@@ -115,6 +116,8 @@ buffers = {}
 
 actor_model = None
 
+learner_model = None
+
 free_queue = None
 
 full_queue = None
@@ -183,6 +186,9 @@ def learn(
 ):
     """Performs a learning (optimization) step."""
     with lock:
+
+        model.train()
+
         learner_outputs, unused_state = model(batch, initial_agent_state)
 
         # Take final value function slice for bootstrapping.
@@ -311,7 +317,7 @@ def train(flags):  # pylint: disable=too-many-branches, too-many-statements
     env = create_env(flags)
 
     global actor_model
-    actor_model = Net(env.observation_space.shape, env.action_space.n, flags.use_lstm)
+    actor_model = Net(env.observation_space.shape, env.action_space.n)
     buffers = create_buffers(flags, env.observation_space.shape, actor_model.num_actions)
 
     # Add initial RNN state.
@@ -329,9 +335,9 @@ def train(flags):  # pylint: disable=too-many-branches, too-many-statements
     full_queue = ctx.SimpleQueue()
 
 
-
+    global learner_model
     learner_model = Net(
-            env.observation_space.shape, env.action_space.n, flags.use_lstm
+            env.observation_space.shape, env.action_space.n
     ).to(device=flags.device)
 
     optimizer = torch.optim.RMSprop(
@@ -458,8 +464,16 @@ grpc implement
 '''
 class ActorInferenceRpc(rpcenv_pb2_grpc.RPCActorInferenceServicer):
     def StreamingInference(self, request, context):
-        print(pickle.loads(request.observation)) 
-        return rpcenv_pb2.Action(action = request.cut_layer)
+        with torch.no_grad():
+            global learner_model
+            learner_model.eval()
+            outputs = learner_model(pickle.loads(request.inter_tensors).cuda(),
+                                    pickle.loads(request.agent_state),
+                                    request.cut_layer,
+                                    LearnerInferenceMode = True,
+                                    T=request.T, B=request.B,
+                                    reward=pickle.loads(request.reward).cuda())
+            return rpcenv_pb2.Action(agent_output_state = pickle.dumps(outputs))
 
 class ActorUpdateModelRPC(rpcenv_pb2_grpc.RPCModelUpdateServicer):
     def StreamingModelUpdate(self, request, context):
@@ -473,8 +487,8 @@ class ActorUploadTrajectoryRPC(rpcenv_pb2_grpc.UploadTrajectoryServicer):
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options=[
-        ('grpc.max_send_message_length', 64 * 1024 * 1024),
-        ('grpc.max_receive_message_length', 64 * 1024 * 1024)])
+        ('grpc.max_send_message_length', 1024 * 1024 * 1024),
+        ('grpc.max_receive_message_length', 1024 * 1024 * 1024)])
 
     rpcenv_pb2_grpc.add_RPCActorInferenceServicer_to_server(ActorInferenceRpc(), server)
     rpcenv_pb2_grpc.add_RPCModelUpdateServicer_to_server(ActorUpdateModelRPC(), server)
@@ -500,6 +514,8 @@ def run_train(flags):
         train(flags)
     else:
         test(flags)
+    ## wait for initial
+    time.sleep(3)
 
 def main(flags):
 

@@ -145,7 +145,7 @@ class Net(nn.Module):
 
 class AtariNet(nn.Module):
     def __init__(self, observation_shape, num_actions, use_lstm=False):
-        super(Net, self).__init__()
+        super(AtariNet, self).__init__()
         self.observation_shape = observation_shape
         self.num_actions = num_actions
 
@@ -233,5 +233,7 @@ class AtariNet(nn.Module):
         )
 
 if __name__ == '__main__':
-    model = Net(num_actions=6)
+    model = Net((4,84,84),num_actions=6)
+    model2 = AtariNet((4,84,84),num_actions=6)
     print(model)
+    print(model2)

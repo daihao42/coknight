@@ -21,7 +21,7 @@ import atari_wrappers
 import logging, typing, traceback
 from utils import rpcenv
 
-from core.models import Net
+from core.ResnetModel import ResNet as Net
 from core import environment
 from core import file_writer
 from core import prof
@@ -39,6 +39,8 @@ parser.add_argument('--env', type=str, default='PongNoFrameskip-v4',
                     help='Gym environment.')
 parser.add_argument("--batch_size", default=8, type=int, metavar="B",
                     help="Batch size.")
+parser.add_argument("--cut_layer", default=10, type=int, metavar="C",
+                    help="Nerual network partition layer index.")
 parser.add_argument("--actor_index", default=1, type=int, metavar="A",
                     help="Actor index.")
 parser.add_argument("--unroll_length", default=80, type=int, metavar="T",
@@ -125,6 +127,7 @@ def act(
 
         model = Net(gym_env.observation_space.shape, num_actions=flags.num_actions
                     ).to(device=flags.device)
+        model.eval()
 
         buffers = create_buffers(flags, gym_env.observation_space.shape, model.num_actions)
 
@@ -145,7 +148,11 @@ def act(
                 timings.reset()
 
                 with torch.no_grad():
-                    agent_output, agent_state = model(env_output, agent_state)
+                    if(flags.cut_layer < model.total_cut_layers):
+                        inter_tensors, inter_T, inter_B = model(env_output, agent_state, cut_layer=flags.cut_layer)
+                        agent_output, agent_state = rpcenv.inference_send(inter_tensors, agent_state, flags.cut_layer, inter_T, inter_B, env_output["reward"], channel)
+                    else : 
+                        agent_output, agent_state = model(env_output, agent_state)
 
                 timings.time("model")
 

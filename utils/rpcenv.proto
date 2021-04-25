@@ -19,16 +19,16 @@ syntax = "proto3";
 package rpcenv;
 
 message Action {
-   int32 action = 1;
+   bytes agent_output_state = 1;
 }
 
 message Step {
-   bytes observation = 1;
-   float reward = 2;
-   bool done = 3;
-   int32 episode_step = 4;
-   float episode_return = 5;
-   int32 cut_layer  = 6;
+   bytes inter_tensors = 1;
+   bytes agent_state = 2;
+   int32 cut_layer  = 3;
+   int32 T = 4;
+   int32 B = 5;
+   bytes reward = 6;
 }
 
 service RPCActorInference {
