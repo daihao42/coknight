@@ -1,0 +1,12 @@
+atari-py==0.2.6
+future==0.18.2
+grpcio==1.35.0
+grpcio-tools==3.14.0
+gym==0.18.0
+opencv-python==4.5.1.48
+opencv-python-headless==4.3.0.36
+Pillow==7.2.0
+protobuf==3.14.0
+torch==1.7.1
+torchaudio==0.7.0a0+a853dff
+torchvision==0.8.2
