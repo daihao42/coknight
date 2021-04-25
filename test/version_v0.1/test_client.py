@@ -1,11 +1,8 @@
 from utils import rpcenv
 import pickle
-from core.models import Net
 
 
 if __name__ == '__main__':
-    model = Net(num_actions = 3)
-    pickle.dumps(model.parameters)
     channel = rpcenv.rpc_connect("192.168.1.154:50051")
     rs = rpcenv.inference_send(obs=[[1]],reward=1,done=False,episode_step = 1,episode_return=1.0,cut_layer=2,channel=channel)
     print(rs)

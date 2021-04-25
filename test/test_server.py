@@ -17,7 +17,7 @@ class ActorUpdateModelRPC(rpcenv_pb2_grpc.RPCModelUpdateServicer):
 class ActorUploadTrajectoryRPC(rpcenv_pb2_grpc.UploadTrajectoryServicer):
     def TrajectoryUpload(self, request, context):
         print("upload",request.actor_id)
-        print(request.datas)
+        print(pickle.loads(request.datas))
         return rpcenv_pb2.Uploaded(ack = "ok")
 
 def serve():

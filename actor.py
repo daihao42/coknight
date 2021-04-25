@@ -43,8 +43,8 @@ parser.add_argument("--actor_index", default=1, type=int, metavar="A",
                     help="Actor index.")
 parser.add_argument("--unroll_length", default=80, type=int, metavar="T",
                     help="The unroll length (time dimension).")
-parser.add_argument("--num_buffers", default=64, type=int,
-                    metavar="N", help="Number of shared-memory buffers.")
+parser.add_argument("--disable_cuda", action="store_true",
+                    help="Disable CUDA.")
 
 
 # yapf: enable
@@ -115,7 +115,16 @@ def act(
 
         flags.num_actions = gym_env.action_space.n
 
-        model = Net(gym_env.observation_space.shape, num_actions=flags.num_actions)
+        flags.device = None
+        if not flags.disable_cuda and torch.cuda.is_available():
+            logging.info("Using CUDA.")
+            flags.device = torch.device("cuda")
+        else:
+            logging.info("Not using CUDA.")
+            flags.device = torch.device("cpu")
+
+        model = Net(gym_env.observation_space.shape, num_actions=flags.num_actions
+                    ).to(device=flags.device)
 
         buffers = create_buffers(flags, gym_env.observation_space.shape, model.num_actions)
 
