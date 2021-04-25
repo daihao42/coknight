@@ -106,6 +106,7 @@ class Net(nn.Module):
         core_input = torch.cat([x, clipped_reward], dim=-1)
 
         if self.use_lstm:
+            '''
             core_input = core_input.view(T, B, -1)
             core_output_list = []
             notdone = (~inputs["done"]).float()
@@ -118,6 +119,8 @@ class Net(nn.Module):
                 output, core_state = self.core(input.unsqueeze(0), core_state)
                 core_output_list.append(output)
             core_output = torch.flatten(torch.cat(core_output_list), 0, 1)
+            '''
+            core_output = core_input
         else:
             core_output = core_input
 
