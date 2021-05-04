@@ -139,3 +139,5 @@ dmypy.json
 
 # VSCode
 .vscode
+
+actor_logs/

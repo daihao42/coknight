@@ -6,7 +6,7 @@ import torchvision
 
 class ResNet(nn.Module):
 
-    def __init__(self, observation_shape, num_actions, layers=(2,3,4,5,6)):
+    def __init__(self, observation_shape, num_actions, layers=(2,2,2,2,2)):
         super(ResNet, self).__init__()
         
         self.block = BasicBlock

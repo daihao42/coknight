@@ -117,13 +117,7 @@ def act(
 
         flags.num_actions = gym_env.action_space.n
 
-        flags.device = None
-        if not flags.disable_cuda and torch.cuda.is_available():
-            logging.info("Using CUDA.")
-            flags.device = torch.device("cuda")
-        else:
-            logging.info("Not using CUDA.")
-            flags.device = torch.device("cpu")
+        flags.device = torch.device("cpu")
 
         model = Net(gym_env.observation_space.shape, num_actions=flags.num_actions
                     ).to(device=flags.device)
@@ -136,12 +130,18 @@ def act(
         agent_state = model.initial_state(batch_size=1)
         agent_output, unused_state = model(env_output, agent_state)
 
+
+        # pull index for model update
+
+        pull_index = 0
+
         while True:
             # Write old rollout end.
             for key in env_output:
                 buffers[key][0][0, ...] = env_output[key]
             for key in agent_output:
                 buffers[key][0][0, ...] = agent_output[key]
+
 
             # Do new rollout.
             for t in range(flags.unroll_length):
@@ -167,19 +167,22 @@ def act(
 
                 timings.time("write")
 
-                # update model after a episode
-                #print(env_output["done"])
-                if(env_output["done"] == True):
-                    parameters = rpcenv.pull_model(actor_index,channel)
-                    logging.info("update model !!")
-                    model.load_state_dict(parameters)
-                    logging.info("update model from learner in %i steps", env_output["episode_step"])
-                    logging.info("model return in %f", env_output["episode_return"])
-
 
             # rpc send buffers to learner
             rpcenv.upload_trajectory(actor_index,buffers,channel)
 
+            pull_index = pull_index + 1
+
+            if(pull_index == flags.batch_size):
+                parameters = rpcenv.pull_model(actor_index,channel)
+                logging.info("update model !!")
+                model.load_state_dict(parameters)
+                logging.info("update model from learner in %i steps", env_output["episode_step"])
+                logging.info("model return in %f", env_output["episode_return"])
+
+                # pull index for model update
+
+                pull_index = 0
 
     except KeyboardInterrupt:
         pass  # Return silently.
