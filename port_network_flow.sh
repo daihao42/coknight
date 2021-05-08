@@ -23,4 +23,7 @@
 #
 #use dstat instead
 # next 10 seconds, the network flow per second 
-dstat -tnf 1 10
+# dstat -tnf 1 10
+# sth wrong with output
+#dstat -nf -N enp4s0,50051 --nocolor --float --noheaders --output networkflows/$1
+dstat -nf -N enp4s0,50051 --nocolor --float --noheaders > networkflows/$1
