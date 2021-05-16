@@ -3,4 +3,4 @@ python learner.py --batch_size 8 --num_buffers 24 --env MsPacmanNoFrameskip-v4 -
     --epsilon 0.01 \
     --entropy_cost 0.01 \
     --total_steps 6100000 \
-    --remark "cut_at_layer_9_actor_6_MsPacman"
+    --remark "cut_at_layer_5_actor_8_MsPacman_bandwidth"
