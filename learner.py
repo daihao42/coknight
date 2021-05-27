@@ -42,6 +42,8 @@ import atari_wrappers
 from concurrent import futures
 import pickle
 import grpc
+from grpc.experimental import aio
+import asyncio
 from utils import rpcenv_pb2,rpcenv_pb2_grpc
 
 
@@ -471,12 +473,16 @@ class ActorInferenceRpc(rpcenv_pb2_grpc.RPCActorInferenceServicer):
         with torch.no_grad():
             global learner_model
             #learner_model.eval()
-            outputs = learner_model(pickle.loads(request.inter_tensors).cuda(),
+            (s_dict, core_state) = learner_model(pickle.loads(request.inter_tensors).cuda(),
                                     pickle.loads(request.agent_state),
                                     request.cut_layer,
                                     LearnerInferenceMode = True,
                                     T=request.T, B=request.B,
                                     reward=pickle.loads(request.reward).cuda())
+            for k,v in s_dict.items():
+                s_dict[k] = v.cpu()
+            core_state = list(map(lambda x:x.cpu(),core_state))
+            outputs = (s_dict,core_state)
             return rpcenv_pb2.Action(agent_output_state = pickle.dumps(outputs))
 
 class ActorUpdateModelRPC(rpcenv_pb2_grpc.RPCModelUpdateServicer):
@@ -489,8 +495,8 @@ class ActorUploadTrajectoryRPC(rpcenv_pb2_grpc.UploadTrajectoryServicer):
         update_buffers(flags, pickle.loads(request.datas))
         return rpcenv_pb2.Uploaded(ack = "ok")
 
-def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10), options=[
+async def serve():
+    server = aio.server(futures.ThreadPoolExecutor(max_workers=48), options=[
         ('grpc.max_send_message_length', 1024 * 1024 * 1024),
         ('grpc.max_receive_message_length', 1024 * 1024 * 1024)])
 
@@ -498,8 +504,12 @@ def serve():
     rpcenv_pb2_grpc.add_RPCModelUpdateServicer_to_server(ActorUpdateModelRPC(), server)
     rpcenv_pb2_grpc.add_UploadTrajectoryServicer_to_server(ActorUploadTrajectoryRPC(), server)
     server.add_insecure_port('[::]:50051')
-    server.start()
-    server.wait_for_termination()
+    await server.start()
+    try:
+        await server.wait_for_termination()
+        
+    except KeyboardInterrupt:
+        await server.stop(None)
 
 
 def create_env(flags):
@@ -525,9 +535,9 @@ def main(flags):
 
     thread = threading.Thread(target = run_train, args=(flags,))
     thread.start()
-    serve()
-
-
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(asyncio.wait([serve()]))
+    loop.close()
 
 if __name__ == "__main__":
     flags = parser.parse_args()
