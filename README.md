@@ -3,6 +3,13 @@
 >Docker Env:
 >pytorch/pytorch:1.7.0-cuda11.0-cudnn8-runtime
 
+## TODO
+
+- [x] Multiple servers support
+
+- [ ] Hyperparameter tuning
+
+
 ### Paper citation
 
 If you used this code for your experiments or found it helpful, consider citing the following paper:
