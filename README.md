@@ -1,4 +1,6 @@
-### A distributed Actor-Learner framework based on [torchbeast](), combined with GRPC, for Atari Games training>
+### A distributed Actor-Learner framework based on [torchbeast]()
+
+combined with GRPC, for Atari Games training
 
 >Docker Env:
 >pytorch/pytorch:1.7.0-cuda11.0-cudnn8-runtime
